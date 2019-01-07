@@ -1,0 +1,55 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<script
+  src="https://code.jquery.com/jquery-3.3.1.js"
+  integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+  crossorigin="anonymous"></script>
+
+<div class="text-center">
+    <h1 class="display-4">Welcome !!!!!!!!!!!!!</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+
+<div id="content">
+    <div class="row">
+        <div id="plan" class="col-md-5">
+            <button id="add-main-task" class="btn btn-primary">追加</button>
+            <div id="task-area">
+            </div>
+        </div>
+        <div id="calendar" class="col-md-5">
+            <p>fuga</p>
+        </div>
+    </div>
+    <div class="row">
+        <div id="work" class="col-md-12">
+
+        </div>
+    </div>
+</div>
+
+<template id="tpl-task-item">
+    <ul>
+        <li>
+            <input type="text">
+            <input type="text" maxlength="4" size="4">分
+            <button class="add-sub-task btn btn-primary">追加</button>
+        </li>
+    </ul>
+</template>
+
+<script type="text/javascript">
+    $(function () {
+        const $taskItemHtml = $('#tpl-task-item').html();
+        $(document).on('click', '#add-main-task', function () {
+            $('#task-area').append($taskItemHtml);
+        });
+
+        $(document).on('click', '.add-sub-task', function () {
+            $(this).parent().append($taskItemHtml);
+        });
+    });
+</script>
