@@ -1,0 +1,17 @@
+version: '2'
+services:
+  app:
+    build: ./app
+    ports:
+     - "5000:5000"
+    volumes:
+     - ./app:/app
+  # web:
+  #   image: nginx:latest
+  #   ports:
+  #     - 8080:80
+  #   links:
+  #     - "app"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+  #     - ./app/publish/wwwroot:/usr/share/nginx/html/wwwroot-aspnetcoretest
