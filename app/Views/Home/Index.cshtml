@@ -2,6 +2,20 @@
     ViewData["Title"] = "Home Page";
 }
 
+<style>
+    .cnt-input {
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .task-item {
+        list-style: none;
+        margin: 10px 0px;
+    }
+</style>
+
+
 <script
   src="https://code.jquery.com/jquery-3.3.1.js"
   integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
@@ -10,45 +24,132 @@
 <!-- <div class="text-center">
     <h1 class="display-4">Welcome !!!!!!!!!!!!!</h1>
     <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div> -->
+</div> 
 
-<div id="content">
-    <div class="row">
-        <div id="plan" class="col-md-5">
-            <button id="add-main-task" class="btn btn-primary">追加</button>
-            <div id="task-area">
+-->
+
+<div class="container-fluid">
+    <div class="row flex-xl-nowrap">
+        <main id="task-overall" class="col-12 col-md-9 col-xl-8 py-md-3 pl-md-5" role="main">
+            <div id="plan">
+                <span>合計: <span id="total-time" data-time="0"></span>min.</span>
+                <button id="add-main-task" class="btn btn-primary">追加</button>
+                <div>
+                    <ul id="task-edit-area"></ul>
+                </div>
             </div>
-        </div>
-        <div id="calendar" class="col-md-5">
-            <p>FUGA</p>
-        </div>
-    </div>
-    <div class="row">
-        <div id="work" class="col-md-12">
+            <hr>
+            <div id="work" class="col-md-12">
+                
+            </div>
 
+        </main>
+        <div id="calendar" class="col-12 col-md-3 col-xl-2">
+            <ul>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+                <li>hoge</li>
+            </ul>
         </div>
     </div>
-</div>
+</main>
 
 <template id="tpl-task-item">
-    <ul>
-        <li>
-            <input type="text">
-            <input type="number" maxlength="4" size="4" style="width: 50px">分
+        <li class="task-item">
+            <input type="text" class="cnt-input" style="width: 250px">
+            <input type="number" class="cnt-input task-estimate-time" maxlength="4" data-prev-val="0" style="width: 70px">分
+            <!-- <input type="text" class="cnt-input"> -->
+            <!-- <input type="number" class="cnt-input" maxlength="4" size="4">分 -->
             <button class="add-sub-task btn btn-primary">追加</button>
+            <button class="delete-sub-task btn btn-danger">削除</button>
         </li>
-    </ul>
 </template>
 
 <script type="text/javascript">
     $(function () {
         const $taskItemHtml = $('#tpl-task-item').html();
-        $(document).on('click', '#add-main-task', function () {
-            $('#task-area').append($taskItemHtml);
-        });
+        $(document).on('click', '#add-main-task', onClickAddMainTask);
+        $(document).on('change', '.task-estimate-time', onChangeTaskEstimateTime);
+        
+        let gCount = 0;
+        function onClickAddMainTask () {
+            addEditTaskItem();
+        }
+
+        function addEditTaskItem() {
+            $('#task-edit-area').append($taskItemHtml);
+        }
+
+        // タスク見積もり時間が変更された時
+        function onChangeTaskEstimateTime() {
+            // 上に上がって時間を更新していく
+            const $this = $(this);
+            const prevVal = parseInt($this.attr('data-prev-val'), 10);
+            const currentVal = parseInt($this.val(), 10);
+            const diffVal = currentVal - prevVal;
+
+            $this.attr('data-prev-val', currentVal);
+
+            const $closestUl = $this.parents('ul');
+            if (isRootUl($closestUl)) {
+                changeTotalTime(diffVal);
+            } else {
+                notifyTimeParentNode($closestUl, diffVal);
+            }
+
+        }
+
+        function notifyTimeParentNode($ul, diffVal) {
+            const $input = $ul.children('input.task-estimate-time');
+            const afterVal = $input.attr('data-prev-val') + diffVal;
+            $input.val(afterVal);
+            $input.attr('data-prev-val', afterVal);
+
+            const $closestUl = $ul.parents('ul');
+            if (gCount++ < 20) {
+                console.log($closestUl);
+            }
+            if (isRootUl($closestUl)) {
+                changeTotalTime(diffVal);
+            } else {
+                notifyTimeParentNode($closestUl, diffVal);
+            }
+        }
+
+        function isRootUl ($ul) {
+            return ($ul.attr('id') === 'task-edit-area');
+        }
+
+        function changeTotalTime(diffVal) {
+            const $totalTime = $('#total-time');
+            const current = parseInt($totalTime.attr('data-time'), 10);
+
+            $totalTime.text(current + diffVal);
+            $totalTime.attr('data-time', current + diffVal);
+        }
 
         $(document).on('click', '.add-sub-task', function () {
-            $(this).parent().append($taskItemHtml);
+            $current = $(this).parent();
+            $lastUlDom = $current.children('ul:last');
+            
+            if ($lastUlDom.length !== 0) {
+                $lastUlDom.append($taskItemHtml);
+            } else {
+                const $ulDom = $('<ul>').append($taskItemHtml);
+                $current.append($ulDom);
+                console.log($ulDom);
+            }
+        });
+        
+        $(document).on('click', '.delete-sub-task', function () {
+            $(this).parent().remove();
         });
     });
 </script>
