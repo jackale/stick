@@ -27,6 +27,7 @@
 </div> 
 
 -->
+            <button id="hoge" class="btn btn-danger">ほげ</button>
 
 <div class="container-fluid">
     <div class="row flex-xl-nowrap">
@@ -63,7 +64,7 @@
 
 <template id="tpl-task-item">
         <li class="task-item">
-            <input type="text" class="cnt-input" style="width: 250px">
+            <input type="text" class="cnt-input task-content" style="width: 250px">
             <input type="number" class="cnt-input task-estimate-time" maxlength="4" data-prev-val="0" style="width: 70px">分
             <!-- <input type="text" class="cnt-input"> -->
             <!-- <input type="number" class="cnt-input" maxlength="4" size="4">分 -->
@@ -77,6 +78,9 @@
         const $taskItemHtml = $('#tpl-task-item').html();
         $(document).on('click', '#add-main-task', onClickAddMainTask);
         $(document).on('change', '.task-estimate-time', onChangeTaskEstimateTime);
+        $(document).on('click', '.add-sub-task', onClickAddSubTask);
+        $(document).on('click', '.delete-sub-task', function () { $(this).parent().remove(); });
+        $(document).on('click', '#hoge', parseUserInput);
         
         let gCount = 0;
         function onClickAddMainTask () {
@@ -92,30 +96,29 @@
             // 上に上がって時間を更新していく
             const $this = $(this);
             const prevVal = parseInt($this.attr('data-prev-val'), 10);
-            const currentVal = parseInt($this.val(), 10);
+            const val = ($this.val() != '') ? $this.val() : 0;
+            const currentVal = parseInt(val, 10);
             const diffVal = currentVal - prevVal;
 
             $this.attr('data-prev-val', currentVal);
 
-            const $closestUl = $this.parents('ul');
+            const $closestUl = $this.parents('ul').first();
             if (isRootUl($closestUl)) {
                 changeTotalTime(diffVal);
             } else {
                 notifyTimeParentNode($closestUl, diffVal);
             }
-
         }
 
         function notifyTimeParentNode($ul, diffVal) {
-            const $input = $ul.children('input.task-estimate-time');
-            const afterVal = $input.attr('data-prev-val') + diffVal;
+            console.log($ul);
+            const $input = $ul.siblings('input.task-estimate-time');
+            const afterVal = parseInt($input.attr('data-prev-val'), 10) + diffVal;
+
             $input.val(afterVal);
             $input.attr('data-prev-val', afterVal);
 
-            const $closestUl = $ul.parents('ul');
-            if (gCount++ < 20) {
-                console.log($closestUl);
-            }
+            const $closestUl = $ul.parents('ul').first();
             if (isRootUl($closestUl)) {
                 changeTotalTime(diffVal);
             } else {
@@ -135,7 +138,7 @@
             $totalTime.attr('data-time', current + diffVal);
         }
 
-        $(document).on('click', '.add-sub-task', function () {
+        function onClickAddSubTask() {
             $current = $(this).parent();
             $lastUlDom = $current.children('ul:last');
             
@@ -143,13 +146,87 @@
                 $lastUlDom.append($taskItemHtml);
             } else {
                 const $ulDom = $('<ul>').append($taskItemHtml);
-                $current.append($ulDom);
-                console.log($ulDom);
+                const $appended = $ulDom.appendTo($current);
+                const $input = $current.children('.task-estimate-time');
+
+                const $closestUl = $current.parents('ul').first();
+                const diffVal = ($input.val()) != '' ? parseInt($input.val(), 10) : 0;
+                if (isRootUl($closestUl)) {
+                    changeTotalTime(-diffVal);
+                } else {
+                    notifyTimeParentNode($closestUl, -diffVal);
+                }
+                $input.attr('disabled', true);
+                $input.val('');
             }
-        });
+        }
         
-        $(document).on('click', '.delete-sub-task', function () {
-            $(this).parent().remove();
-        });
+        function parseUserInput() {
+            const $root = $('#task-edit-area');
+            
+            const $children = $root.children('li');
+            let data = [];
+            $children.each(function (i, li) {
+                const $li = $(li);
+                const content = $li.find('input.task-content').val();
+                const time = parseValToNum($li.find('input.task-estimate-time'));
+                let elem = {
+                    content: content,
+                    time: time
+                };
+
+                
+                const $ul = $li.children('ul');
+                if ($ul.length > 0) {
+                    let $childs = [];
+                    $ul.children('li').each(function (i, grandChild) {
+                        $grandChild = $(grandChild);
+                        console.log($grandChild);
+                        $childs.push(downParse($grandChild));
+                    });
+                    elem['children'] = $childs;
+                } else {
+                    elem['children'] = null;
+                }
+
+                data.push(elem);
+            });
+
+            return data;
+        }
+
+        function downParse($child) {
+            const content = $child.find('input.task-content').val();
+            const time = parseValToNum($child.find('input.task-estimate-time'));
+            let data = {
+                content: content,
+                time: time
+            };
+
+            const $ul = $child.children('ul');
+            if ($ul.length > 0) {
+                let $childs = [];
+                $ul.children('li').each(function (i, grandChild) {
+                    $grandChild = $(grandChild);
+                    $childs.push(downParse($grandChild));
+                });
+                data['children'] = $childs;
+            } else {
+                data['children'] = null;
+            }
+
+            return data;
+        }
+
+        function makeWorkPaneFromData(data) {
+            
+        }
+
+
+        function parseValToNum($dom) {
+            return $dom.val() !== '' ? $dom.val() : 0;
+        }
     });
+
+
 </script>
