@@ -14,7 +14,7 @@
         margin: 10px 0px;
     }
 </style>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
 
 <script
   src="https://code.jquery.com/jquery-3.3.1.js"
@@ -27,13 +27,30 @@
 </div> 
 
 -->
-            <button id="hoge" class="btn btn-danger">ほげ</button>
+<!-- <button id="export" class="btn btn-primary">export</button>
+
+<div>
+    <textarea name="import-data" id="import-data"></textarea>
+    <button id="import" class="btn btn-primary">import</button>
+</div> -->
+
+
 
 <div class="container-fluid">
     <div class="row flex-xl-nowrap">
-        <main id="task-overall" class="col-12 col-md-9 col-xl-8 py-md-3 pl-md-5" role="main">
+        <div id="today" class="col-12 col-md-5 col-xl-5">
+            <section id="today-info">
+                <p>残り時間: n min. (= m hour)</p>
+                <p>タスクにかかる時間: x min. (= y hour)</p>
+                <p>あまり時間: r min. (= s hour)</p>
+            </section>
+            <ul id="today-task-list">
+            </ul>
+        </div>
+
+        <main id="task-overall" class="col-12 col-md-7 col-xl-7 py-md-3 pl-md-5" role="main">
             <div id="plan">
-                <span>合計: <span id="total-time" data-time="0"></span>min.</span>
+                <span>合計: <span id="total-time" data-time="0"></span></span>
                 <button id="add-main-task" class="btn btn-primary">追加</button>
                 <div>
                     <ul id="task-edit-area"></ul>
@@ -43,22 +60,7 @@
             <div id="work" class="col-md-12">
                 
             </div>
-
         </main>
-        <div id="calendar" class="col-12 col-md-3 col-xl-2">
-            <ul>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-                <li>hoge</li>
-            </ul>
-        </div>
     </div>
 </main>
 
@@ -70,26 +72,90 @@
             <!-- <input type="number" class="cnt-input" maxlength="4" size="4">分 -->
             <button class="add-sub-task btn btn-primary">追加</button>
             <button class="delete-sub-task btn btn-danger">削除</button>
+            <button class="stack-today-task btn btn-success">今日やる</button>
         </li>
 </template>
+
+<script id="tpl-embark-task-item" type="text/template">
+    <li class="embark-task-item">
+        <div>
+            <span class="task-text"><%= content %></span>
+            <span class="task-estimate-time"><%= minute %> min. (= <%= hour %> h)</span>
+            <button class="btn btn-primary">開始</button>
+            <button class="btn btn-warn">却下</button>
+        </div>
+    </li>
+</script>
 
 <script type="text/javascript">
     $(function () {
         const $taskItemHtml = $('#tpl-task-item').html();
+        const $embarkTaskItemHtml = $('#tpl-embark-task-item').html();
+
+
         $(document).on('click', '#add-main-task', onClickAddMainTask);
         $(document).on('change', '.task-estimate-time', onChangeTaskEstimateTime);
         $(document).on('click', '.add-sub-task', onClickAddSubTask);
-        $(document).on('click', '.delete-sub-task', function () { $(this).parent().remove(); });
-        $(document).on('click', '#hoge', parseUserInput);
+        $(document).on('click', '.delete-sub-task', onClickDeleteSubTask);
+        $(document).on('click', '#import', importTaskTree);
+        $(document).on('click', '#export', exportTaskTree);
+        $(document).on('click', '.stack-today-task', onClickStackTodayTask);
         
         let gCount = 0;
         function onClickAddMainTask () {
             addEditTaskItem();
         }
 
+        function onClickDeleteSubTask() { 
+            const $current = $(this).parent();
+            const $closestUl = $current.parents('ul').first();
+            const $input = $current.find('.task-estimate-time');
+            const diffVal = ($input.val() != '') ? parseInt($input.val(), 10) : 0;
+
+            if (isRootUl($closestUl)) {
+                changeTotalTime(-diffVal);
+            } else {
+                notifyTimeParentNode($closestUl, -diffVal);
+            }
+            // $input.attr('disabled', true);
+            // $input.val('');
+
+            $current.remove();
+        }
+
         function addEditTaskItem() {
             $('#task-edit-area').append($taskItemHtml);
         }
+
+        function onClickStackTodayTask() {
+            console.warn('WIP');
+
+            stackTodayTask($(this).parent());
+        }
+
+        function stackTodayTask($taskDom) {
+            const taskData = parseTaskDomToData($taskDom);
+            console.log($taskDom)
+            applyTaskDataToDom(taskData);
+        }
+
+        function parseTaskDomToData($taskDom) {
+            const minute = parseInt($taskDom.find('.task-estimate-time').val(), 10);
+            const hour = (minute / 60).toFixed(2);
+            return {
+                content: $taskDom.find('.task-content').val(),
+                minute: minute,
+                hour: hour
+            }
+        }
+
+        function applyTaskDataToDom(taskData, $taskDom) {
+            const text = $('#tpl-embark-task-item').text();
+            console.log(taskData);
+            const compiled = _.template(text);
+            $('#today-task-list').append(compiled(taskData));
+        }
+
 
         // タスク見積もり時間が変更された時
         function onChangeTaskEstimateTime() {
@@ -134,7 +200,15 @@
             const $totalTime = $('#total-time');
             const current = parseInt($totalTime.attr('data-time'), 10);
 
-            $totalTime.text(current + diffVal);
+            const minute = current + diffVal;
+            const hour = (minute / 60).toFixed(2);
+
+            let text = `${minute} min`;
+            if (hour > 1) {
+                text += ` (= ${hour}h)`;
+            }
+
+            $totalTime.text(text);
             $totalTime.attr('data-time', current + diffVal);
         }
 
@@ -156,6 +230,7 @@
                 } else {
                     notifyTimeParentNode($closestUl, -diffVal);
                 }
+                $input.attr('data-prev-val', 0);
                 $input.attr('disabled', true);
                 $input.val('');
             }
@@ -181,7 +256,6 @@
                     let $childs = [];
                     $ul.children('li').each(function (i, grandChild) {
                         $grandChild = $(grandChild);
-                        console.log($grandChild);
                         $childs.push(downParse($grandChild));
                     });
                     elem['children'] = $childs;
@@ -219,13 +293,51 @@
         }
 
         function makeWorkPaneFromData(data) {
-            
+            console.log(data);
+            let i = 0;
+            while(true) {
+                const item = data[i];
+                $('#task-edit-area').append($taskItemHtml);
+            }
+        }
+        
+        function importTaskTree() {
+            const data = JSON.parse($('#import-data').val());
+            makeWorkPaneFromData(data);
+        }
+
+        function exportTaskTree() {
+            const data = parseUserInput();
+            console.log(data);
+            copyTextToClipboard(JSON.stringify(data));
         }
 
 
         function parseValToNum($dom) {
             return $dom.val() !== '' ? $dom.val() : 0;
         }
+
+        function copyTextToClipboard(textVal){
+            // テキストエリアを用意する
+            var copyFrom = document.createElement("textarea");
+            // テキストエリアへ値をセット
+            copyFrom.textContent = textVal;
+
+            // bodyタグの要素を取得
+            var bodyElm = document.getElementsByTagName("body")[0];
+            // 子要素にテキストエリアを配置
+            bodyElm.appendChild(copyFrom);
+
+            // テキストエリアの値を選択
+            copyFrom.select();
+            // コピーコマンド発行
+            var retVal = document.execCommand('copy');
+            // 追加テキストエリアを削除
+            bodyElm.removeChild(copyFrom);
+            // 処理結果を返却
+            return retVal;
+        }
+        
     });
 
 
