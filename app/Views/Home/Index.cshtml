@@ -81,10 +81,17 @@
         <div>
             <span class="task-text"><%= content %></span>
             <span class="task-estimate-time"><%= minute %> min. (= <%= hour %> h)</span>
-            <button class="btn btn-primary">開始</button>
-            <button class="btn btn-warn">却下</button>
+            <%= buttonDiv %>
         </div>
     </li>
+</script>
+
+<!-- 切り替え可能なボタンコンポーネント -->
+<script id="cpt-switchable-button" type="text/template">
+    <div class="switchable-button-area">
+        <button class="switchable <%= a.class %>" onclick="<%= a.callback %>"><%= a.text %></button>
+        <button class="switchable <%= b.class %>" onclick="<%= b.callback %>" style="display: none;"><%= b.text %></button>
+    </div>
 </script>
 
 <script type="text/javascript">
@@ -135,7 +142,6 @@
 
         function stackTodayTask($taskDom) {
             const taskData = parseTaskDomToData($taskDom);
-            console.log($taskDom)
             applyTaskDataToDom(taskData);
         }
 
@@ -151,8 +157,18 @@
 
         function applyTaskDataToDom(taskData, $taskDom) {
             const text = $('#tpl-embark-task-item').text();
-            console.log(taskData);
             const compiled = _.template(text);
+            taskData['buttonDiv'] = makeSwitchableButton(
+                {
+                    text: '開始',
+                    class: 'btn btn-primary task-start',
+                    callback: function () { console.log('開始！'); }
+                },
+                {
+                    text: '終了',
+                    class: 'btn btn-warning task-end',
+                    callback: function () { console.log('終了！'); }
+                });
             $('#today-task-list').append(compiled(taskData));
         }
 
@@ -337,6 +353,35 @@
             // 処理結果を返却
             return retVal;
         }
+
+        function makeSwitchableButton(paramA, paramB) {
+            const tpl = _.template($('#cpt-switchable-button').text());
+            let data = {
+                'a': {},
+                'b': {}
+            };
+
+            data['a'] = {
+                'text': paramA['text'],
+                'class': paramA['class'],
+                'callback': '(' + paramA['callback'] + ')();'
+            };
+            data['b'] = {
+                'text': paramB['text'],
+                'class': paramB['class'],
+                'callback': '(' + paramB['callback'] + ')();'
+            };
+
+            return tpl(data);
+        }
+
+        function buttonSwitch() {
+            const $nextTo = $(this).siblings('.switchable');
+            $nextTo.show();
+            $(this).hide();
+        }
+        $(document).on('click', '.switchable', buttonSwitch);
+
         
     });
 
