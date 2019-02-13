@@ -1,0 +1,40 @@
+﻿@{ /* 切り替え可能なボタンコンポーネント */ }
+
+<script id="cpt-switchable-button" type="text/template">
+    <div class="switchable-button-area">
+        <button class="switchable <%= a.class %>" onclick="<%= a.callback %>"><%= a.text %></button>
+        <button class="switchable <%= b.class %>" onclick="<%= b.callback %>" style="display: none;"><%= b.text %></button>
+    </div>
+</script>
+
+<script>
+    $(function () {
+        function makeSwitchableButton(paramA, paramB) {
+            const tpl = _.template($('#cpt-switchable-button').text());
+            let data = {
+                'a': {},
+                'b': {}
+            };
+
+            data['a'] = {
+                'text': paramA['text'],
+                'class': paramA['class'],
+                'callback': '(' + paramA['callback'] + ')();'
+            };
+            data['b'] = {
+                'text': paramB['text'],
+                'class': paramB['class'],
+                'callback': '(' + paramB['callback'] + ')();'
+            };
+
+            return tpl(data);
+        }
+
+        function buttonSwitch() {
+            const $nextTo = $(this).siblings('.switchable');
+            $nextTo.show();
+            $(this).hide();
+        }
+        $(document).on('click', '.switchable', buttonSwitch);
+    });
+</script>
